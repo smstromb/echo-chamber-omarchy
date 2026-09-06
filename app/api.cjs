@@ -1,4 +1,4 @@
-const { randomUUID, randomBytes } = require("node:crypto");
+const { randomUUID, randomBytes, createHash } = require("node:crypto");
 function serverURL(value) {
   const u = new URL(value);
   if (
@@ -18,8 +18,10 @@ function serverURL(value) {
   return u.origin;
 }
 class EchoAPI {
-  constructor(config, fetcher = fetch) {
+  constructor(config, fetcher = fetch, authState = new Map()) {
     this.config = config;
+    this.authState = authState;
+    this.adminExpires = 0;
     this.fetch = fetcher;
     this.admin = "";
     this.password = "";
@@ -44,10 +46,23 @@ class EchoAPI {
         {
           401: "Password or session is no longer valid. Sign in again.",
           409: "That name is already connected. Choose another name.",
-          429: "Too many login attempts. Please wait before retrying.",
+          429:
+            path === "/v1/auth/login"
+              ? "Too many login attempts. Wait before trying again."
+              : "Too many requests. Wait before trying again.",
         }[response.status] || `Server request failed (${response.status})`,
       );
       e.status = response.status;
+      if (response.status === 429) {
+        const retry = response.headers.get("retry-after");
+        const seconds =
+          retry && /^\d+$/.test(retry.trim()) ? Number(retry) : NaN;
+        const deadline = Number.isFinite(seconds)
+          ? Date.now() + seconds * 1000
+          : Date.parse(retry);
+        if (Number.isFinite(deadline))
+          e.retryAt = Math.max(Date.now() + 1000, deadline);
+      }
       throw e;
     }
     return response.status === 204 ||
@@ -55,9 +70,56 @@ class EchoAPI {
       ? null
       : response.json();
   }
-  async login(password) {
-    const data = await this.request("/v1/auth/login", { password });
+  loginLimit() {
+    const origin = this.config.server;
+    if (!this.authState.has(origin))
+      this.authState.set(origin, { retryAt: 0, rejected: new Set() });
+    return this.authState.get(origin);
+  }
+  async login(password, { automatic = false } = {}) {
+    const limit = this.loginLimit();
+    const fingerprint = createHash("sha256").update(password).digest("hex");
+    if (limit.retryAt > Date.now())
+      throw Object.assign(
+        Error("Too many login attempts. Wait before trying again."),
+        { status: 429, retryAt: limit.retryAt },
+      );
+    if (automatic && limit.rejected.has(fingerprint))
+      throw Object.assign(
+        Error("Saved password was rejected. Enter the current room password."),
+        { status: 401 },
+      );
+    if (limit.pending && limit.pending.fingerprint !== fingerprint)
+      throw Error("Sign-in is already in progress.");
+    if (!limit.pending) {
+      const pending = { fingerprint };
+      pending.promise = this.request("/v1/auth/login", { password })
+        .then((data) => {
+          limit.retryAt = 0;
+          limit.rejected.clear();
+          return data;
+        })
+        .catch((error) => {
+          if (error.status === 401) limit.rejected.add(fingerprint);
+          if (error.status === 429) {
+            // Upstream omits Retry-After. Use a conservative local delay;
+            // the server's actual remaining window can be shorter.
+            limit.retryAt = error.retryAt || Date.now() + 15 * 60 * 1000;
+            error.retryAt = limit.retryAt;
+          }
+          throw error;
+        })
+        .finally(() => {
+          if (limit.pending === pending) limit.pending = null;
+        });
+      limit.pending = pending;
+    }
+    const data = await limit.pending.promise;
     this.admin = data.token;
+    this.adminExpires =
+      data.expires_in_seconds > 0
+        ? Date.now() + data.expires_in_seconds * 1000
+        : Infinity;
     this.password = password;
     return { ok: true };
   }
@@ -73,7 +135,7 @@ class EchoAPI {
       data = await this.request("/v1/auth/token", body, this.admin);
     } catch (e) {
       if (e.status !== 401 || !this.password) throw e;
-      await this.login(this.password);
+      await this.login(this.password, { automatic: true });
       data = await this.request("/v1/auth/token", body, this.admin);
     }
     this.token = data.token;
@@ -120,7 +182,7 @@ class EchoAPI {
       );
     } catch (e) {
       if (e.status !== 401 || participant || !this.password) throw e;
-      await this.login(this.password);
+      await this.login(this.password, { automatic: true });
       return this.request(path, body, this.admin);
     }
   }

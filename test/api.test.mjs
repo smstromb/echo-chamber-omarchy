@@ -100,3 +100,100 @@ test("ICE credentials are fetched with admin auth and Jam actions bind both iden
     /Unsupported|Invalid/,
   );
 });
+
+test("login cooldown is shared by candidate clients and honors Retry-After", async () => {
+  let requests = 0;
+  const config = { server: "https://example.com" };
+  const api = new EchoAPI(config, async () => {
+    requests++;
+    return new Response("{}", {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    });
+  });
+  const candidate = new EchoAPI(config, api.fetch, api.authState);
+  await assert.rejects(
+    candidate.login("test"),
+    (e) => e.status === 429 && e.retryAt > Date.now() + 58000,
+  );
+  await assert.rejects(api.login("test"), (e) => e.status === 429);
+  assert.equal(requests, 1);
+  api.loginLimit().retryAt = Date.now() - 1;
+  await assert.rejects(api.login("test"), (e) => e.status === 429);
+  assert.equal(requests, 2);
+});
+test("missing Retry-After uses a conservative 15-minute cooldown; non-login 429 is not mislabeled", async () => {
+  const api = new EchoAPI(
+    { server: "https://example.com" },
+    async () => new Response("{}", { status: 429 }),
+  );
+  await assert.rejects(
+    api.login("test"),
+    (e) => e.retryAt > Date.now() + 899000,
+  );
+  await assert.rejects(api.request("/api/jam/state"), /Too many requests/);
+});
+test("background auth stops retrying a rejected password, while explicit corrected sign-in remains available", async () => {
+  let logins = 0;
+  const api = new EchoAPI(
+    { server: "https://example.com" },
+    async (url, options) => {
+      if (!url.endsWith("/login")) return new Response("{}", { status: 401 });
+      logins++;
+      return new Response(JSON.stringify({ token: "new" }), {
+        status: JSON.parse(options.body).password === "correct" ? 200 : 401,
+      });
+    },
+  );
+  api.admin = "expired";
+  api.password = "wrong";
+  for (let n = 0; n < 3; n++)
+    await assert.rejects(api.authenticated("/api/jam/state"));
+  assert.equal(logins, 1);
+  await api.login("correct");
+  assert.equal(logins, 2);
+  assert.equal(api.password, "correct");
+});
+test("simultaneous authentication refreshes share one login request", async () => {
+  let requests = 0,
+    release;
+  const api = new EchoAPI({ server: "https://example.com" }, async () => {
+    requests++;
+    await new Promise((r) => {
+      release = r;
+    });
+    return new Response(JSON.stringify({ token: "new" }));
+  });
+  const a = api.login("test"),
+    b = api.login("test");
+  release();
+  await Promise.all([a, b]);
+  assert.equal(requests, 1);
+});
+test("Retry-After HTTP dates are honored", async () => {
+  const deadline = Date.now() + 60000;
+  const api = new EchoAPI(
+    { server: "https://example.com" },
+    async () =>
+      new Response("{}", {
+        status: 429,
+        headers: { "Retry-After": new Date(deadline).toUTCString() },
+      }),
+  );
+  await assert.rejects(
+    api.login("test"),
+    (e) => e.retryAt > deadline - 1000 && e.retryAt <= deadline,
+  );
+});
+
+test("Retry-After zero uses a short local guard instead of the fallback lockout", async () => {
+  const api = new EchoAPI(
+    { server: "https://example.com" },
+    async () =>
+      new Response("{}", { status: 429, headers: { "Retry-After": "0" } }),
+  );
+  await assert.rejects(
+    api.login("test"),
+    (e) => e.retryAt > Date.now() && e.retryAt <= Date.now() + 1000,
+  );
+});

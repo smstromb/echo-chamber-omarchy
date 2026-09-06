@@ -956,20 +956,62 @@ $("signout").onclick = async () => {
 };
 $("pg13").onclick = () => act({ action: "pg13", enabled: !state.data?.pg13 });
 $("cancel-setup").onclick = () => $("setup").close();
+let loginBusy = false;
+const loginCooldowns = new Map();
+const loginOrigin = (value) => {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+};
+function syncLoginButton() {
+  const remaining = Math.max(
+    0,
+    Math.ceil(
+      ((loginCooldowns.get(loginOrigin($("server").value)) || 0) - Date.now()) /
+        1000,
+    ),
+  );
+  $("save").disabled = loginBusy || remaining > 0;
+  $("save").textContent = loginBusy
+    ? "Signing in…"
+    : remaining
+      ? `Retry in ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`
+      : "Sign in";
+}
+async function loadLoginCooldown(server) {
+  if (!loginOrigin(server)) return;
+  try {
+    const result = await window.echo.call("login-status", { server });
+    loginCooldowns.set(loginOrigin(server), result.retryAt || 0);
+  } catch {
+    /* A malformed address is handled by the sign-in form. */
+  }
+  syncLoginButton();
+}
+setInterval(syncLoginButton, 1000);
+$("server").addEventListener("input", () => {
+  $("setup-error").textContent = "";
+  syncLoginButton();
+});
 $("setup-form").onsubmit = async (event) => {
   event.preventDefault();
-  $("save").disabled = true;
+  if (loginBusy || $("save").disabled) return;
+  loginBusy = true;
+  syncLoginButton();
   $("setup-error").textContent = "";
+  const input = {
+    server: $("server").value,
+    name: $("name").value,
+    room: selected,
+    password: $("password").value,
+    remember: $("remember").checked,
+  };
   try {
-    await window.echo.call("login", {
-      server: $("server").value,
-      name: $("name").value,
-      room: selected,
-      password: $("password").value,
-      remember: $("remember").checked,
-    });
-    controller.config.server = $("server").value;
-    controller.config.name = $("name").value;
+    await window.echo.call("login", input);
+    controller.config.server = input.server;
+    controller.config.name = input.name;
     controller.state.signedIn = true;
     controller.state.configured = true;
     controller.state.error = "";
@@ -979,8 +1021,10 @@ $("setup-form").onsubmit = async (event) => {
     controller.publish();
   } catch (e) {
     $("setup-error").textContent = e.message;
+    await loadLoginCooldown(input.server);
   } finally {
-    $("save").disabled = false;
+    loginBusy = false;
+    syncLoginButton();
   }
 };
 window.echo?.onCommand(async (c) => {
@@ -995,6 +1039,7 @@ if (window.echo)
       selectRoom(initial.config.room || "main");
       $("server").value = initial.config.server || "";
       $("name").value = initial.config.name || "";
+      await loadLoginCooldown(initial.config.server);
       $("remember").disabled = !initial.canRemember;
       $("remember").checked = !!initial.remembered && initial.canRemember;
       $("remember-note").textContent = initial.canRemember

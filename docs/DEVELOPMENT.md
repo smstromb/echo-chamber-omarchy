@@ -17,6 +17,7 @@ npm ci                   # in a separate development checkout
 npm test                 # protocol, state transitions, mix, companion identities, private socket
 npm run test:install      # isolated installer, configuration preservation and repeat install
 npm run test:e2e          # actual Electron GUI with explicitly labelled sample people
+npm run test:auth-limit   # isolated rate limit, duplicate-submit guard, cooldown and session reuse
 npm run test:auth         # isolated dummy account, real desktop keyring, process restart and forget
 LIVEKIT_SERVER=/path/to/livekit-server npm run test:media
 omarchy plugin validate "$PWD/plugin"

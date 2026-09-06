@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "local.echo-chamber",
   "name": "Echo Chamber",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": "smstromb",
   "description": "Echo Chamber desktop companion and Omarchy toolbar controls.",
   "kinds": [

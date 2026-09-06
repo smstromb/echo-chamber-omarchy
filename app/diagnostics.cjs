@@ -24,6 +24,7 @@ const events = new Set([
 const numbers = new Set([
   "pid",
   "exitCode",
+  "statusCode",
   "participants",
   "audioTracks",
   "attached",

@@ -50,12 +50,23 @@ async function login({ api, config, storage, persist }, args = {}) {
   } else if (args.remember === false || next.server !== config.server) {
     delete next.secret;
   }
-  const candidate = new EchoAPI(next, api.fetch);
-  await candidate.login(password);
+  const candidate = new EchoAPI(next, api.fetch, api.authState);
+  const automatic = args.server === undefined && args.password === undefined;
+  if (
+    automatic &&
+    api.admin &&
+    api.password === password &&
+    api.adminExpires > Date.now() + 30000
+  ) {
+    candidate.admin = api.admin;
+    candidate.adminExpires = api.adminExpires;
+    candidate.password = password;
+  } else await candidate.login(password, { automatic });
   persist(next);
   Object.assign(config, next);
   if (!next.secret) delete config.secret;
   api.admin = candidate.admin;
+  api.adminExpires = candidate.adminExpires;
   api.password = candidate.password;
   return { ok: true };
 }

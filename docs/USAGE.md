@@ -23,6 +23,12 @@ Audio devices and processing are in the **Audio** drawer; profile settings expan
 
 The app selects GNOME libsecret on Linux and respects an explicit `--password-store` override. No password or bearer token is exposed to the toolbar; the private control socket has mode `0600`.
 
+## Login cooldown
+
+A rate-limited sign-in shows a countdown and blocks duplicate submissions. The client honors `Retry-After`; if the server omits it, the client waits a conservative 15 minutes from receiving the rate-limit response. The server's actual remaining window may be shorter. The running app shares this cooldown between manual sign-in and background authentication, and stops automatically retrying a rejected password. A valid in-memory session is reused after a window reload.
+
+The referenced upstream server limits five failed attempts within a 15-minute window per connecting IP. A reverse proxy can cause multiple users to share that limit. Restarting the client does not clear the server's block. After the cooldown, enter the current room password and sign in explicitly; there is no automatic password retry when the timer expires.
+
 ## Updates
 
 ```sh

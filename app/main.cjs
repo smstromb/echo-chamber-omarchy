@@ -12,7 +12,7 @@ const {
 } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
-const { EchoAPI, defaults } = require("./api.cjs");
+const { EchoAPI, defaults, serverURL } = require("./api.cjs");
 const credentials = require("./credentials.cjs");
 const { serve } = require("./socket.cjs");
 const { createLogger } = require("./diagnostics.cjs");
@@ -254,6 +254,13 @@ if (!app.requestSingleInstanceLock()) {
               canRemember: secureStore(),
               remembered: !!config.secret,
               hasSessionPassword: !!api.password,
+              loginRetryAt: api.loginLimit().retryAt,
+            };
+          case "login-status":
+            return {
+              retryAt:
+                api.authState.get(serverURL(args.server || config.server))
+                  ?.retryAt || 0,
             };
           case "login":
             return credentials.login(
@@ -320,13 +327,24 @@ if (!app.requestSingleInstanceLock()) {
         }
       };
       // Presence writes and token rotation must finish before leave; no late heartbeat resurrection.
-      if (name === "online" || name === "init") return run();
-      const result = apiQueue.then(run).catch((error) => {
-        log("operation.failed", { error: error.name });
-        throw error;
-      });
+      const failure = (error) => {
+        log("operation.failed", {
+          error: error.name,
+          statusCode: error.status,
+        });
+        return {
+          __echoError: {
+            message: error.message,
+            status: error.status,
+            retryAt: error.retryAt,
+          },
+        };
+      };
+      if (["online", "init", "login-status"].includes(name))
+        return run().catch(failure);
+      const result = apiQueue.then(run);
       apiQueue = result.catch(() => {});
-      return result;
+      return result.catch(failure);
     });
     ipcMain.on("echo:state", (e, next) => {
       if (trusted(e.sender)) {

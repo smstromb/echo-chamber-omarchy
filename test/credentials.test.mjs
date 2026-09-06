@@ -125,3 +125,12 @@ test("a new origin never receives the previous password implicitly", async () =>
   );
   assert.equal(f.requests.length, 0);
 });
+
+test("renderer reload reuses a valid in-memory session without another password attempt", async () => {
+  const f = fixture();
+  f.api.adminExpires = Date.now() + 60000;
+  await login(f);
+  assert.equal(f.requests.length, 0);
+  assert.equal(f.api.admin, "old-session");
+  assert.equal(f.saved.secret, "c2VhbGVk");
+});
