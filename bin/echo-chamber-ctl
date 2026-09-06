@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Private Unix-socket client for the Echo Chamber desktop process."""
+import json, os, socket, sys, time
+args = sys.argv[1:]
+demo = '--demo' in args
+if demo: args.remove('--demo')
+action = args[0] if args else 'status'
+if action == 'json':
+    payload = json.loads(args[1])
+else:
+    payload = {'action': action}
+    if action == 'join' and len(args) > 1: payload['room'] = args[1]
+    if action in ('mute', 'volume'):
+        payload['identity'] = args[1]
+        if action == 'volume': payload['value'] = float(args[2])
+runtime = os.environ.get('XDG_RUNTIME_DIR')
+if not runtime: sys.exit('XDG_RUNTIME_DIR is not set')
+path = os.environ.get('ECHO_SOCKET_PATH') or runtime + ('/echo-chamber-demo.sock' if demo else '/echo-chamber.sock')
+while True:
+    try:
+        with socket.socket(socket.AF_UNIX) as connection:
+            connection.settimeout(12)
+            connection.connect(path)
+            connection.sendall((json.dumps(payload)+'\n').encode())
+            connection.settimeout(None if action == 'watch' else 50)
+            with connection.makefile() as stream:
+                for line in stream:
+                    print(line.strip(), flush=True)
+                    if action != 'watch':
+                        sys.exit(0 if json.loads(line).get('ok', False) else 1)
+    except (OSError, ValueError) as error:
+        if action != 'watch':
+            print(json.dumps({'ok':False,'error':'Echo Chamber is not running. Open it from your launcher.'}), flush=True)
+            sys.exit(1)
+    if action != 'watch': sys.exit(1)
+    print(json.dumps({'status':'stopped','participants':[],'online':[],'error':'Open Echo Chamber to connect.'}),flush=True)
+    time.sleep(3)

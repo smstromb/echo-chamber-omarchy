@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; media-src 'self' blob:; img-src 'self' data: blob:; worker-src 'self' blob:"
+    />
+    <title>Echo Chamber</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <img class="icon" src="icons/wave-sine.svg" alt="" /><strong
+            >Echo Chamber</strong
+          >
+        </div>
+        <details id="other-rooms-menu" class="room-menu">
+          <summary>
+            <span id="heading">Main</span
+            ><img class="icon small" src="icons/chevron-down.svg" alt="" />
+          </summary>
+          <nav id="rooms" aria-label="Voice rooms"></nav>
+        </details>
+        <span id="connection" class="connection">Not signed in</span>
+        <div id="view-controls" class="button-group" hidden>
+          <button
+            id="grid"
+            class="icon-button"
+            title="Grid"
+            aria-label="Grid"
+            aria-pressed="true"
+            data-icon="layout-grid"
+          ></button
+          ><button
+            id="focus"
+            class="icon-button"
+            title="Focus"
+            aria-label="Focus"
+            aria-pressed="false"
+            data-icon="focus-2"
+          ></button
+          ><button
+            id="fullscreen"
+            class="icon-button"
+            title="Fullscreen"
+            aria-label="Fullscreen"
+            data-icon="maximize"
+          ></button>
+        </div>
+        <button
+          id="toggle-people"
+          class="icon-button"
+          title="People"
+          aria-label="Toggle people"
+          data-icon="users"
+        ></button>
+        <button
+          id="settings"
+          class="icon-button"
+          title="Settings"
+          aria-label="Settings"
+          data-icon="settings"
+        ></button>
+      </header>
+      <div id="preview-bar" hidden>
+        <span>Design preview</span>
+        <div class="button-group" aria-label="Preview scenario">
+          <button data-scene="voice">Voice</button
+          ><button data-scene="cameras">Cameras</button
+          ><button data-scene="screens">Screens</button>
+        </div>
+        <button id="preview-jam">Jam</button
+        ><span class="preview-note">Sample media · no server connection</span>
+      </div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div id="workspace">
+        <main id="stage">
+          <section id="welcome" class="lobby">
+            <h1 id="lobby-title">Main</h1>
+            <div id="lobby-people"></div>
+            <p id="lobby-status">No one is connected.</p>
+            <button id="join" class="primary">Join Main</button>
+          </section>
+          <section
+            id="voice-stage"
+            class="voice-stage"
+            aria-label="Call participants"
+            hidden
+          ></section>
+          <section
+            id="screens"
+            class="screens"
+            aria-label="Shared screens"
+            hidden
+          ></section>
+          <section
+            id="camera-strip"
+            class="camera-strip"
+            aria-label="Cameras"
+            hidden
+          ></section>
+        </main>
+        <aside id="sidebar" aria-label="Call sidebar">
+          <div class="sidebar-heading">
+            <h2 id="people-title">People <span id="count">0</span></h2>
+            <button
+              id="drawer-close"
+              class="icon-button"
+              aria-label="Back to people"
+              title="Back to people"
+              data-icon="x"
+              hidden
+            ></button>
+          </div>
+          <div id="people"></div>
+          <div id="drawer" hidden></div>
+        </aside>
+      </div>
+      <div id="jam-strip" hidden>
+        <span class="jam-symbol" data-icon="music"></span
+        ><button id="jam-open">
+          <strong id="jam-track">Night Drive</strong
+          ><span id="jam-artist">Low Coast · Sam’s PC</span></button
+        ><button
+          id="jam-listen"
+          class="icon-button"
+          aria-label="Join Jam"
+          title="Join Jam"
+          data-icon="player-play"
+        ></button
+        ><img class="icon small" src="icons/volume.svg" alt="" /><input
+          id="jam-volume"
+          aria-label="Jam volume"
+          type="range"
+          min="0"
+          max="100"
+          value="30"
+        /><output id="jam-output">30%</output>
+      </div>
+      <footer class="callbar">
+        <div class="local-user">
+          <span class="avatar small-avatar" id="self-avatar">S</span>
+          <div>
+            <strong id="self-name">You</strong
+            ><span id="local-state" class="muted">Mic off</span>
+          </div>
+        </div>
+        <div id="call-controls" class="call-actions" hidden>
+          <button
+            id="mic"
+            class="icon-button"
+            title="Unmute mic"
+            aria-label="Unmute mic"
+            data-icon="microphone-off"
+          ></button>
+          <button
+            id="deafen"
+            class="icon-button"
+            title="Deafen"
+            aria-label="Deafen"
+            data-icon="headphones"
+          ></button>
+          <button
+            id="camera"
+            class="icon-button"
+            title="Camera"
+            aria-label="Camera"
+            data-icon="video-off"
+          ></button>
+          <button
+            id="share"
+            class="icon-button"
+            title="Share screen"
+            aria-label="Share screen"
+            data-icon="screen-share"
+          ></button>
+          <span class="divider"></span>
+          <button
+            id="audio"
+            class="icon-button"
+            title="Audio"
+            aria-label="Audio"
+            data-icon="adjustments-horizontal"
+          ></button>
+          <button
+            id="chat"
+            class="icon-button"
+            title="Chat"
+            aria-label="Chat"
+            data-icon="message-circle"
+          ></button>
+          <button
+            id="jam"
+            class="icon-button"
+            title="Jam"
+            aria-label="Jam"
+            data-icon="music"
+          ></button>
+          <button
+            id="soundboard"
+            class="icon-button"
+            title="Soundboard"
+            aria-label="Soundboard"
+            data-icon="mood-smile"
+          ></button>
+        </div>
+        <button
+          id="pg13"
+          class="icon-button"
+          title="Toggle PG-13 mode"
+          aria-label="Toggle PG-13 mode"
+          data-icon="shield"
+        ></button
+        ><span id="foot-note"></span
+        ><button
+          id="leave"
+          class="icon-button danger"
+          title="Leave room"
+          aria-label="Leave room"
+          data-icon="phone-off"
+          hidden
+        ></button>
+      </footer>
+    </div>
+    <dialog id="setup">
+      <form id="setup-form">
+        <div class="dialog-heading">
+          <h2>Server sign-in</h2>
+          <button
+            type="button"
+            id="cancel-setup"
+            class="icon-button"
+            aria-label="Cancel"
+            data-icon="x"
+          ></button>
+        </div>
+        <label
+          >Server address<input
+            id="server"
+            type="url"
+            placeholder="https://echo.example:9443"
+            required /></label
+        ><label
+          >Your name<input
+            id="name"
+            maxlength="128"
+            placeholder="Display name"
+            required /></label
+        ><label
+          >Room password<input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            required /></label
+        ><label class="checkbox"
+          ><input id="remember" type="checkbox" />Remember password</label
+        ><small id="remember-note"></small>
+        <button id="signout" type="button">Sign out and forget password</button>
+        <p id="setup-error" role="alert"></p>
+        <button id="save" type="submit" class="primary">Sign in</button>
+      </form>
+    </dialog>
+    <dialog id="confirm">
+      <h2>End Jam?</h2>
+      <p>Ends it for everyone and clears the queue.</p>
+      <div class="dialog-actions">
+        <button id="confirm-cancel">Cancel</button
+        ><button id="confirm-end" class="danger">End Jam</button>
+      </div>
+    </dialog>
+    <script src="ui.js"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+artifacts/
+*.log
+__pycache__/
+.env
+.env.*
+!.env.example
+connection.json
+*.sock
+*.pem
+*.key
+*.bak*
+/design-qa.md
