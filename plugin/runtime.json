@@ -1,0 +1,8 @@
+{
+  "version": "0.1.1",
+  "linux-x64": {
+    "url": "https://github.com/smstromb/echo-chamber-omarchy/releases/download/v0.1.1/echo-chamber-linux-x64.tar.gz",
+    "sha256": "4cd7fb496848e716a477e2abd75ec2c834421da7c7c7e2a7c3ac15025a6e47c2",
+    "size": 131867113
+  }
+}

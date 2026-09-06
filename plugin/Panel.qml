@@ -12,12 +12,18 @@ Panel {
 
     readonly property color accent: Color.accent
     property string actionError: ""
+    property bool appReady: false
+    property bool openAfterSetup: false
+    property string setupMessage: "Setting up Echo Chamber…"
+    property string setupError: ""
+    readonly property string installHome: Quickshell.env("ECHO_INSTALL_HOME") || Quickshell.env("HOME")
+    readonly property string bootstrapScript: decodeURIComponent(Qt.resolvedUrl("bootstrap.py").toString().replace("file://", ""))
     readonly property bool available: !joined && !state.onlineError && people.length > 0
     readonly property bool busy: state.status === "joining" || state.status === "leaving"
     readonly property string ctl: Qt.resolvedUrl("echo-chamber-ctl").toString().replace("file://", "")
     readonly property color fg: bar ? bar.foreground : Color.foreground
     readonly property bool joined: state.status === "joined" || state.status === "reconnecting"
-    readonly property string launcher: Quickshell.env("HOME") + "/.local/bin/echo-chamber"
+    readonly property string launcher: root.installHome + "/.local/bin/echo-chamber"
     readonly property var people: joined ? (state.participants || []) : (state.online || [])
     property var state: ({
             status: "starting",
@@ -33,8 +39,48 @@ Panel {
         action.running = true;
     }
     function showApp() {
+        if (!appReady) {
+            openAfterSetup = true;
+            if (!setup.running)
+                retrySetup();
+            return;
+        }
         Quickshell.execDetached([root.launcher]);
         root.close();
+    }
+    function retrySetup() {
+        setupError = "";
+        setupMessage = "Setting up Echo Chamber…";
+        setup.running = true;
+    }
+
+    Component.onCompleted: retrySetup()
+
+    Process {
+        id: setup
+        command: ["python3", root.bootstrapScript, "--home", root.installHome]
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    const result = JSON.parse(data);
+                    if (result.status === "error")
+                        root.setupError = result.message;
+                    else if (result.status === "ready") {
+                        root.appReady = true;
+                        root.setupMessage = "";
+                        if (root.openAfterSetup) {
+                            root.openAfterSetup = false;
+                            root.showApp();
+                        }
+                    } else
+                        root.setupMessage = result.message;
+                } catch (e) {}
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0 && !root.setupError)
+                root.setupError = "Setup failed. Retry when connected to the internet.";
+        }
     }
 
     implicitHeight: button.implicitHeight
@@ -87,7 +133,7 @@ Panel {
         anchors.fill: parent
         bar: root.bar
         text: root.joined ? "󰋋" : root.available ? "󰥔" : "󰋎"
-        tooltipText: root.joined ? "Echo Chamber · " + root.people.length + " in room" : root.available ? root.people.length + " online · Click for participants" : "Echo Chamber · Click to open"
+        tooltipText: root.setupError ? root.setupError : !root.appReady ? root.setupMessage : root.joined ? "Echo Chamber · " + root.people.length + " in room" : root.available ? root.people.length + " online · Click for participants" : "Echo Chamber · Click to open"
 
         iconComponent: Component {
             Item {
@@ -144,6 +190,25 @@ Panel {
                 y: 16
 
                 Keys.onEscapePressed: root.close()
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: !root.appReady
+                    Text {
+                        Layout.fillWidth: true
+                        color: root.setupError ? "#e5ac97" : root.fg
+                        font.pixelSize: 12
+                        text: root.setupError || root.setupMessage
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
+                    Button {
+                        text: "Retry"
+                        visible: !!root.setupError
+                        enabled: !setup.running
+                        onClicked: root.retrySetup()
+                    }
+                }
 
                 Text {
                     color: root.accent
@@ -266,7 +331,7 @@ Panel {
                                     onPressedChanged: if (!pressed)
                                         root.send({
                                             action: "volume",
-                                                bus: "voice",
+                                            bus: "voice",
                                             identity: person.modelData.identity,
                                             value: Math.round(value)
                                         })
@@ -284,7 +349,11 @@ Panel {
                                 Button {
                                     text: person.modelData.screenMuted ? "Unmute screen" : "Mute screen"
                                     enabled: !action.running
-                                    onClicked: root.send({ action: "mute", bus: "screen", identity: person.modelData.identity })
+                                    onClicked: root.send({
+                                        action: "mute",
+                                        bus: "screen",
+                                        identity: person.modelData.identity
+                                    })
                                 }
                                 Slider {
                                     id: screenVolume
@@ -297,10 +366,20 @@ Panel {
                                     value: person.modelData.screenVolume === undefined ? 100 : person.modelData.screenVolume
                                     Keys.onReleased: event => {
                                         if (event.key === Qt.Key_Left || event.key === Qt.Key_Right)
-                                            root.send({ action: "volume", bus: "screen", identity: person.modelData.identity, value: Math.round(value) });
+                                            root.send({
+                                                action: "volume",
+                                                bus: "screen",
+                                                identity: person.modelData.identity,
+                                                value: Math.round(value)
+                                            });
                                     }
                                     onPressedChanged: if (!pressed)
-                                        root.send({ action: "volume", bus: "screen", identity: person.modelData.identity, value: Math.round(value) })
+                                        root.send({
+                                            action: "volume",
+                                            bus: "screen",
+                                            identity: person.modelData.identity,
+                                            value: Math.round(value)
+                                        })
                                 }
                                 Text {
                                     Layout.preferredWidth: 32

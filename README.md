@@ -17,49 +17,36 @@ Open **Echo Chamber** from the app launcher. Enter the HTTPS server **origin** (
 
 ## Install on Omarchy
 
-Requires **Omarchy with the Quickshell bar and `omarchy plugin add`**, Node.js 22+, npm, Git, Python 3, and a working PipeWire desktop portal. Legacy Waybar-based Omarchy installations are not supported. GNOME Keyring/libsecret enables **Remember password**. The installer uses your current user and needs no sudo.
-
-Check `node --version` and `npm --version`. If Node/npm are missing, install them through your usual Omarchy package or mise setup before continuing.
+Requires **Omarchy with the Quickshell bar** on Linux x86-64. Legacy Waybar installations are not supported. The desktop app and Electron runtime are bundled; Node.js and npm are not needed to install or use it.
 
 ```sh
-omarchy plugin add https://github.com/smstromb/echo-chamber-omarchy.git
-cd ~/.config/omarchy/plugins/local.echo-chamber
-./install.sh
-~/.local/bin/echo-chamber
+omarchy plugin add https://github.com/smstromb/echo-chamber-omarchy.git --enable
 ```
 
-If Omarchy asks whether to enable the plugin during the first step, you can choose **No**; `install.sh` adds the toolbar entry after the desktop app builds. Review the plugin as prompted by Omarchy. The first build downloads Electron and npm dependencies and can take a few minutes.
+Enabling the toolbar automatically downloads the desktop app from this repository's pinned GitHub release, checks its SHA-256 digest, and installs it for your user. The toolbar shows download/setup progress. Once ready, right-click its icon to open **Echo Chamber**, enter your server details, and join **Main**. No GitHub account or sudo is needed. Request the server address and password from its host.
 
-Enter your server address, display name and password in the app, then join **Main**. Request the server details from its host. No GitHub account is needed to install this public repository.
+If a download fails, open the toolbar popover and click **Retry**. Normal Omarchy services provide PipeWire screen capture and GNOME Keyring password storage.
 
-The installer:
-
-- Builds the desktop app into a versioned folder under `~/.local/share/echo-chamber/builds/`.
-- Installs the launcher, private control CLI, desktop entry and background login autostart.
-- Adds one toolbar entry and backs up `shell.json` before changing it, preserving your other widgets and settings.
-- Keeps npm dependencies outside the plugin checkout, so Omarchy's plugin validator/updater can manage it normally.
-- Leaves running calls alone. Updates take effect when you quit the app with **Ctrl+Q** and reopen it.
+The app is installed under `~/.local/share/echo-chamber/builds/`, with a launcher, desktop entry and login autostart. The plugin checkout stays free of runtime dependencies so Omarchy can validate and update it normally. Setup does not restart existing calls.
 
 ### Update
 
 ```sh
 omarchy plugin update local.echo-chamber
-cd ~/.config/omarchy/plugins/local.echo-chamber
-./install.sh
 ```
 
-When ready, quit and reopen Echo Chamber. Signing in with **Remember password** restores the session; joining voice remains explicit. Older app builds are retained so an update cannot remove files used by an active call. After quitting the app, obsolete folders under `~/.local/share/echo-chamber/builds/` can be removed; keep the build referenced by `~/.local/bin/echo-chamber`.
+When the updated plugin loads, it prepares the matching desktop release automatically. Quit Echo Chamber with **Ctrl+Q** and reopen it when ready to switch builds; an active call is left running. Saved credentials and audio settings are preserved. Older builds remain available to running processes; after quitting the app, obsolete folders under `~/.local/share/echo-chamber/builds/` can be removed, keeping the build referenced by `~/.local/bin/echo-chamber`.
 
 ### Existing source checkout / development
 
-If you already installed from a source checkout, use that checkout rather than adding a second plugin with the same ID:
+Source development still requires Node.js 22+, npm and Python 3. If you installed from a separate development checkout, update and build there:
 
 ```sh
 git pull --ff-only
 ./install.sh
 ```
 
-For development, run `npm ci`, `npm run build`, then `npm start`. `npm run install:desktop` points the launcher directly at the development checkout. Use `npm start -- --demo` for sample data with a separate control socket and no server connection. Do not run `npm ci` inside the git-managed Omarchy plugin folder; use `install.sh`, or a separate development clone.
+For development, run `npm ci`, `npm run build`, then `npm start`. `npm run install:desktop` points the launcher directly at the development checkout. Use `npm start -- --demo` for sample data with a separate control socket and no server connection. Do not run `npm ci` inside the git-managed Omarchy plugin folder; use a separate development clone. `install.sh` remains an optional source-build installer, not part of the normal plugin installation.
 
 ## Verification
 
@@ -128,3 +115,7 @@ Jam, chat, outgoing cameras and soundboard remain simulations in the explicit pr
 ## License
 
 [MIT](LICENSE). See [third-party notices](THIRD-PARTY.md).
+
+## Preparing a desktop release
+
+Maintainers run `npm ci` and `npm run package:linux` on Linux x86-64. This produces `artifacts/releases/echo-chamber-linux-x64.tar.gz` and updates `plugin/runtime.json` with the release URL, size and SHA-256 digest. Test that exact artifact through `plugin/bootstrap.py` in an isolated home before publishing it. Publish the asset under the matching `v<version>` GitHub release **before** advancing `main` to the commit that pins it. Keep release assets immutable; use a new version for a replacement build.
