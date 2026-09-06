@@ -8,12 +8,14 @@ const {
   desktopCapturer,
   dialog,
   shell,
+  powerMonitor,
 } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const { EchoAPI, defaults } = require("./api.cjs");
 const credentials = require("./credentials.cjs");
 const { serve } = require("./socket.cjs");
+const { createLogger } = require("./diagnostics.cjs");
 const demo = process.argv.includes("--demo");
 if (process.env.ECHO_USER_DATA)
   app.setPath("userData", process.env.ECHO_USER_DATA);
@@ -37,6 +39,8 @@ if (!app.requestSingleInstanceLock()) {
   let state = { status: "starting", participants: [], online: [], error: "" };
   let counter = 0;
   const pending = new Map();
+  let diagnostic, lastCallState;
+  const log = (event, fields) => diagnostic?.write(event, fields);
   let apiQueue = Promise.resolve();
   const configPath = path.join(app.getPath("userData"), "connection.json");
   const persist = (value = config) => {
@@ -72,6 +76,7 @@ if (!app.requestSingleInstanceLock()) {
         "deafen",
         "share",
         "camera",
+        "recover-audio",
       ].includes(c.action)
     )
       throw Error("Unknown command");
@@ -93,6 +98,33 @@ if (!app.requestSingleInstanceLock()) {
   process.on("SIGTERM", () => app.quit());
   process.on("SIGINT", () => app.quit());
   app.whenReady().then(async () => {
+    diagnostic = createLogger(path.join(app.getPath("userData"), "logs"));
+    log("app.start", {
+      pid: process.pid,
+      version: app.getVersion(),
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+    });
+    const recoverAudio = (reason) => {
+      if (!quitting && ["joined", "reconnecting"].includes(state.status))
+        command({ action: "recover-audio", reason }).catch(() => {});
+    };
+    app.on("child-process-gone", (_event, details) => {
+      const audio =
+        /audio/i.test(details.name || "") ||
+        /audio/i.test(details.serviceName || "");
+      log("process.gone", {
+        process: audio ? "Audio" : details.type === "GPU" ? "GPU" : "Utility",
+        reason: details.reason,
+        exitCode: details.exitCode,
+      });
+      if (audio) setTimeout(() => recoverAudio("audio-service"), 500);
+    });
+    powerMonitor.on("suspend", () => log("system.suspend"));
+    powerMonitor.on("resume", () => {
+      log("system.resume");
+      setTimeout(() => recoverAudio("system-resume"), 1000);
+    });
     config = defaults();
     try {
       config = {
@@ -136,6 +168,18 @@ if (!app.requestSingleInstanceLock()) {
       ]),
     );
     const trusted = (wc) => wc === win.webContents;
+    win.webContents.on("render-process-gone", (_event, details) =>
+      log("process.gone", {
+        process: "Renderer",
+        reason: details.reason,
+        exitCode: details.exitCode,
+      }),
+    );
+    win.on("unresponsive", () => log("renderer.unresponsive"));
+    win.on("responsive", () => log("renderer.responsive"));
+    ipcMain.on("echo:diagnostic", (e, event, fields) => {
+      if (trusted(e.sender)) log(event, fields);
+    });
     session.defaultSession.setPermissionRequestHandler(
       (wc, permission, callback, details) =>
         callback(
@@ -277,13 +321,31 @@ if (!app.requestSingleInstanceLock()) {
       };
       // Presence writes and token rotation must finish before leave; no late heartbeat resurrection.
       if (name === "online" || name === "init") return run();
-      const result = apiQueue.then(run);
+      const result = apiQueue.then(run).catch((error) => {
+        log("operation.failed", { error: error.name });
+        throw error;
+      });
       apiQueue = result.catch(() => {});
       return result;
     });
     ipcMain.on("echo:state", (e, next) => {
       if (trusted(e.sender)) {
         state = next;
+        const callState = JSON.stringify([
+          state.status,
+          state.deafened,
+          state.micMuted,
+          state.participants?.length,
+        ]);
+        if (callState !== lastCallState) {
+          lastCallState = callState;
+          log("call.state", {
+            state: state.status,
+            deafened: state.deafened,
+            micMuted: state.micMuted,
+            participants: state.participants?.length || 0,
+          });
+        }
         bridge?.publish(state);
       }
     });
@@ -315,6 +377,7 @@ if (!app.requestSingleInstanceLock()) {
     if (quitting) return;
     e.preventDefault();
     quitting = true;
+    log("app.quit");
     const done = () => {
       bridge?.server.close();
       app.quit();

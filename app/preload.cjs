@@ -1,5 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("echo", {
+  diagnostic: (event, fields) =>
+    ipcRenderer.send("echo:diagnostic", event, fields),
   call: (name, args) => ipcRenderer.invoke("echo:call", name, args),
   publish: (state) => ipcRenderer.send("echo:state", state),
   onCommand: (callback) =>

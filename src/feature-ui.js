@@ -42,6 +42,16 @@ export function createFeatureUI({ controller: c, esc, icon, ib, render }) {
       )
       .join("")}</section>`;
     if (c.room) {
+      const recovery = document.createElement("button");
+      recovery.id = "recover-audio";
+      recovery.textContent = "Restart audio";
+      recovery.onclick = () => {
+        recovery.disabled = true;
+        run(() => command({ action: "recover-audio" })).finally(() => {
+          recovery.disabled = false;
+        });
+      };
+      el.append(recovery);
       const profile = document.createElement("details");
       profile.className = "profile-settings";
       profile.innerHTML = `<summary>Profile</summary><label>Avatar<input type="file" data-profile="avatar-upload" accept="image/png,image/jpeg,image/gif,image/webp"></label>${["enter", "exit"].map((kind) => `<label>${kind === "enter" ? "Join sound" : "Leave sound"}<input type="file" data-profile="chime-upload" data-kind="${kind}" accept="audio/*"></label><div class="utility-actions">${ib("player-play", "Preview " + kind + " sound", `data-preview-chime="${kind}"`)}${ib("trash", "Remove " + kind + " sound", `data-remove-chime="${kind}"`)}</div>`).join("")}`;

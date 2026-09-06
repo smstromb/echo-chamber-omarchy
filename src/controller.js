@@ -2,6 +2,7 @@ import { Room, RoomEvent, Track } from "livekit-client";
 import { JamClient } from "./jam.js";
 import { RoomData, identityBase } from "./room-data.js";
 import { Effects } from "./effects.js";
+import { AudioPlayback } from "./audio-playback.js";
 import { people, parentIdentity, volume } from "./model.js";
 export class Controller {
   constructor(api, emit, attach, createRoom = (options) => new Room(options)) {
@@ -31,6 +32,9 @@ export class Controller {
       signedIn: false,
       configured: false,
     };
+  }
+  diagnostic(event, fields = {}) {
+    globalThis.window?.echo?.diagnostic?.(event, fields);
   }
   publish() {
     if (this.room) {
@@ -163,6 +167,11 @@ export class Controller {
     return run;
   }
   async execute(c) {
+    if (c.action === "recover-audio") {
+      if (!this.room) throw Error("Join a room first.");
+      await this.audioPlayback?.recover(c.reason || "manual");
+      return;
+    }
     if (c.action === "retry-video") {
       const room = this.room;
       const publications = [...(room?.remoteParticipants.values() || [])]
@@ -329,9 +338,10 @@ export class Controller {
         ];
         return;
       }
+      this.audioPlayback = new AudioPlayback(this);
       const room = this.createRoom({
         adaptiveStream: true,
-        webAudioMix: true,
+        webAudioMix: this.audioPlayback.options(),
         audioOutput: { deviceId: this.preferences.audiooutput || "default" },
         videoCaptureDefaults: {
           deviceId: this.preferences.videoinput || "default",
@@ -405,10 +415,19 @@ export class Controller {
         )
           this.effects.chime("stop", p.identity).catch(() => {});
       });
+      room.on(RoomEvent.AudioPlaybackStatusChanged, (canPlayback) => {
+        if (this.room !== room) return;
+        this.diagnostic("audio.playback", { canPlayback });
+        this.state.audioError = canPlayback
+          ? ""
+          : "Audio playback interrupted. Restart audio from Audio settings.";
+        this.publish();
+      });
       room.on(RoomEvent.TrackSubscriptionFailed, (sid, p) => {
         if (this.room !== room) return;
+        this.diagnostic("media.subscription.failed", {});
         this.state.error =
-          "Video subscription failed" +
+          "Media subscription failed" +
           (p?.name ? " for " + p.name : "") +
           ". Use Retry on the screen tile.";
         this.publish();
@@ -448,6 +467,7 @@ export class Controller {
           this.command({ action: "lost", sourceRoom: room }).catch(() => {});
       });
       try {
+        await this.audioPlayback.selectOutput();
         const credentials = await this.api("token", { room: this.state.room });
         let iceServers;
         try {
@@ -472,6 +492,7 @@ export class Controller {
         await room.startAudio();
         // Join listening, then explicitly enable your mic. Never capture in the lobby.
         this.state.status = "joined";
+        this.audioPlayback.start(room);
         await this.heartbeat();
         data.announce().catch(() => {});
         data.load().catch(() => {});
@@ -583,6 +604,11 @@ export class Controller {
   async refreshDevices(fallback = false) {
     if (!globalThis.navigator?.mediaDevices) return;
     const devices = await navigator.mediaDevices.enumerateDevices();
+    this.diagnostic("devices.changed", {
+      inputCount: devices.filter((d) => d.kind === "audioinput").length,
+      outputCount: devices.filter((d) => d.kind === "audiooutput").length,
+      cameraCount: devices.filter((d) => d.kind === "videoinput").length,
+    });
     this.state.devices = devices.map((d) => ({
       kind: d.kind,
       deviceId: d.deviceId,
@@ -609,6 +635,9 @@ export class Controller {
   async leave() {
     this.joinAbort?.abort();
     this.joinAbort = null;
+    this.audioPlayback?.dispose();
+    this.audioPlayback = null;
+    this.state.audioError = "";
     const old = this.room;
     const jam = this.jamClient;
     this.jamClient = null;

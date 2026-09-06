@@ -3,7 +3,7 @@ import { _electron as electron } from "playwright";
 import { createServer, request } from "node:http";
 import { createHmac } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, rm, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
 import assert from "node:assert/strict";
 const dir = await mkdtemp("/tmp/echo-media-");
@@ -293,6 +293,7 @@ try {
   const page = await app.firstWindow();
   await page.addInitScript(() => {
     window.testGains = [];
+    window.testContexts = new Set();
     const resume = AudioContext.prototype.resume;
     AudioContext.prototype.resume = async function (...args) {
       await resume.apply(this, args);
@@ -301,6 +302,7 @@ try {
     const create = AudioContext.prototype.createGain;
     AudioContext.prototype.createGain = function (...args) {
       const node = create.apply(this, args);
+      window.testContexts.add(this);
       window.testGains.push(node);
       return node;
     };
@@ -408,6 +410,115 @@ try {
   assert.equal(
     await page.getByRole("button", { name: "Focus You camera" }).count(),
     0,
+  );
+  // Break only the receiver's graph while RTP and the video keep running.
+  // Recovery must not change room membership, microphone or the saved mix.
+  await page.evaluate(() => {
+    window.receiverContext = window.testGains.find(
+      (g) => Math.abs(g.gain.value - 1.7) < 0.01,
+    ).context;
+  });
+  await page.getByRole("button", { name: "Deafen", exact: true }).click();
+  await page.evaluate(async () => {
+    window.preRecoveryContexts = [...window.testContexts];
+    await window.receiverContext.close();
+  });
+  await page.getByRole("button", { name: "Audio", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Restart audio", exact: true })
+    .click();
+  await page.waitForFunction(() =>
+    [...window.testContexts].some(
+      (ctx) =>
+        !window.preRecoveryContexts.includes(ctx) && ctx.state === "running",
+    ),
+  );
+  await page.waitForFunction(
+    () => !document.getElementById("recover-audio").disabled,
+  );
+  const newGains = await page.evaluate(() =>
+    window.testGains
+      .filter((g) => !window.preRecoveryContexts.includes(g.context))
+      .map((g) => g.gain.value),
+  );
+  assert.ok(
+    newGains.length > 0 && newGains.every((g) => g === 0),
+    "recovery preserves deafen",
+  );
+  await page.getByRole("button", { name: "Undeafen", exact: true }).click();
+  await page.waitForFunction(() =>
+    window.testGains.some(
+      (g) =>
+        !window.preRecoveryContexts.includes(g.context) &&
+        Math.abs(g.gain.value - 1.7) < 0.01,
+    ),
+  );
+  await page.evaluate(() => {
+    const gain = window.testGains.find(
+      (g) =>
+        !window.preRecoveryContexts.includes(g.context) &&
+        Math.abs(g.gain.value - 1.7) < 0.01,
+    );
+    window.recoveredAnalyser = gain.context.createAnalyser();
+    gain.connect(window.recoveredAnalyser);
+  });
+  await page.waitForFunction(() => {
+    const samples = new Float32Array(window.recoveredAnalyser.fftSize);
+    window.recoveredAnalyser.getFloatTimeDomainData(samples);
+    return samples.some((value) => Math.abs(value) > 0.001);
+  });
+  assert.equal(iceCount, 1, "audio recovery must not rejoin the room");
+  await peer.waitForFunction(() =>
+    [...window.peerRooms[0].remoteParticipants.values()].some(
+      (p) => p.isMicrophoneEnabled,
+    ),
+  );
+  // The watchdog also resumes a suspended graph with no user action.
+  await page.evaluate(async () => {
+    window.preWatchdogContexts = [...window.testContexts];
+    await Promise.all(
+      window.preWatchdogContexts
+        .filter((ctx) => ctx.state === "running")
+        .map((ctx) => ctx.suspend()),
+    );
+  });
+  await page.waitForFunction(
+    () =>
+      [...window.testContexts].some(
+        (ctx) =>
+          !window.preWatchdogContexts.includes(ctx) && ctx.state === "running",
+      ),
+    undefined,
+    { timeout: 45000 },
+  );
+  await app.evaluate(({ app }) => {
+    app.emit(
+      "child-process-gone",
+      {},
+      {
+        type: "Utility",
+        name: "Audio Service",
+        reason: "crashed",
+        exitCode: 1,
+      },
+    );
+  });
+  await page.waitForFunction(
+    () => !document.getElementById("recover-audio").disabled,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const diagnosticLog = await readFile(
+    dir + "/profile/logs/diagnostics.jsonl",
+    "utf8",
+  );
+  assert.match(diagnosticLog, /audio.recovery.complete/);
+  assert.match(diagnosticLog, /audio.health/);
+  assert.match(diagnosticLog, /"process":"Audio"/);
+  assert.match(diagnosticLog, /"reason":"audio-service"/);
+  assert.ok(
+    !diagnosticLog.includes(origin) &&
+      !diagnosticLog.includes("Linux test") &&
+      !diagnosticLog.includes("Orbit"),
   );
   await page.getByRole("button", { name: "Chat", exact: true }).click();
   await page

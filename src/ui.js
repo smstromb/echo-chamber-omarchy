@@ -688,7 +688,7 @@ function render(s) {
     if ($("lobby-people").innerHTML !== content)
       $("lobby-people").innerHTML = content;
   }
-  $("notice").textContent = s.error || s.onlineError || "";
+  $("notice").textContent = s.error || s.audioError || s.onlineError || "";
   $("notice").hidden = !$("notice").textContent;
   $("preview-bar").hidden = !controller.demo;
   for (const b of document.querySelectorAll("[data-scene]"))
