@@ -34,7 +34,7 @@ if (browserPreview)
       name === "init"
         ? {
             demo: true,
-            config: { room: "main", name: "Spencer", mix: {} },
+            config: { room: "main", name: "You", mix: {} },
             canRemember: false,
           }
         : {},
@@ -60,19 +60,19 @@ const media = new Map(),
   mediaNodes = new Map();
 const hiddenSources = new Set();
 const demoPeople = [
-  { identity: "self", name: "Spencer", self: true, micMuted: true },
-  { identity: "sam", name: "Sam", speaking: true },
-  { identity: "alex", name: "Alex" },
-  { identity: "jordan", name: "Jordan" },
-  { identity: "maya", name: "Maya" },
-  { identity: "chris", name: "Chris", micMuted: true },
+  { identity: "self", name: "You", self: true, micMuted: true },
+  { identity: "orbit", name: "Orbit", speaking: true },
+  { identity: "pixel", name: "Pixel" },
+  { identity: "comet", name: "Comet" },
+  { identity: "moss", name: "Moss" },
+  { identity: "relay", name: "Relay", micMuted: true },
 ];
 const jam = {
   active: false,
   listening: false,
   playing: true,
   volume: 30,
-  source: "Sam’s PC",
+  source: "Orbit’s PC",
   queue: [
     { title: "Night Drive", artist: "Low Coast" },
     { title: "Coastal Highway", artist: "Solar Flare" },
@@ -80,12 +80,12 @@ const jam = {
   ],
 };
 const messages = [
-  { name: "Sam", text: "Anyone up for a race?" },
-  { name: "Alex", text: "Give me a minute." },
+  { name: "Orbit", text: "Anyone up for a race?" },
+  { name: "Pixel", text: "Give me a minute." },
 ];
 const avatars = {
-  sam: "assets/camera-sam.png",
-  maya: "assets/camera-maya.png",
+  orbit: "assets/camera-orbit.png",
+  moss: "assets/camera-moss.png",
 };
 function avatar(p) {
   const live = state?.data?.avatars?.[p.identity];
@@ -115,8 +115,8 @@ function demoScenario(next) {
       screenMuted: false,
       ...controller.mix[p.identity],
       sharing:
-        next === "screens" && ["sam", "alex", "jordan"].includes(p.identity),
-      camera: next !== "voice" && ["sam", "maya"].includes(p.identity),
+        next === "screens" && ["orbit", "pixel", "comet"].includes(p.identity),
+      camera: next !== "voice" && ["orbit", "moss"].includes(p.identity),
     }));
     controller.publish();
   } else render(state);
@@ -127,9 +127,9 @@ function syncDemoMedia() {
   if (!joined()) return;
   if (scene === "screens") {
     for (const [id, asset] of [
-      ["sam", "screen-space.png"],
-      ["alex", "screen-racing.png"],
-      ["jordan", "screen-space.png"],
+      ["orbit", "screen-space.png"],
+      ["pixel", "screen-racing.png"],
+      ["comet", "screen-space.png"],
     ])
       media.set(`${id}-screen`, {
         id: `${id}-screen`,
@@ -140,7 +140,7 @@ function syncDemoMedia() {
       });
   }
   if (scene !== "voice") {
-    for (const id of ["sam", "maya"])
+    for (const id of ["orbit", "moss"])
       media.set(`${id}-camera`, {
         id: `${id}-camera`,
         owner: id,
@@ -155,7 +155,7 @@ function syncDemoMedia() {
       owner: "self",
       name: "You",
       type: "camera",
-      image: avatars.sam,
+      image: avatars.orbit,
     });
   if (state.sharing)
     media.set("self-screen", {
@@ -563,7 +563,7 @@ function renderDrawer(users) {
     if (drawer === "jam" && controller.demo) {
       el.innerHTML = jam.active
         ? `<section class="drawer-section"><h3>${esc(jam.queue[0]?.title || "Queue empty")}</h3><p>${esc(jam.queue[0]?.artist || "")}</p><p>${esc(jam.source)}</p><div class="jam-actions"><button id="drawer-listen">${jam.listening ? "Leave Jam" : "Join Jam"}</button>${ib(jam.playing ? "player-pause" : "player-play", jam.playing ? "Stop music for everyone" : "Resume music", 'id="jam-pause"')}${ib("player-skip-forward", "Skip track for everyone", 'id="jam-skip"')}${ib("x", "End Jam for everyone", 'id="jam-end"')}</div></section><span class="drawer-label">Queue</span>${jam.queue.map((t, i) => `<div class="queue-row"><span class="queue-index">${i + 1}</span><div><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></div>${i > 0 ? ib("x", `Remove ${t.title}`, `data-remove="${i}"`) : ""}</div>`).join("")}<form id="add-track" class="drawer-form"><input id="track-title" aria-label="Track title" placeholder="Add a track" required>${ib("plus", "Add track", 'type="submit"')}</form>`
-        : `<section class="drawer-section"><label for="jam-source">Audio source</label><select id="jam-source"><option>Sam’s PC</option><option disabled>This computer — unavailable</option></select><button id="start-jam" class="primary">Start Jam</button></section>`;
+        : `<section class="drawer-section"><label for="jam-source">Audio source</label><select id="jam-source"><option>Orbit’s PC</option><option disabled>Local source unavailable</option></select><button id="start-jam" class="primary">Start Jam</button></section>`;
       $("start-jam")?.addEventListener("click", () => {
         jam.active = true;
         jam.listening = true;
@@ -695,7 +695,7 @@ function render(s) {
     b.setAttribute("aria-pressed", String(scene === b.dataset.scene));
   $("preview-jam").setAttribute("aria-pressed", String(jam.active));
   $("self-name").textContent = controller.demo
-    ? "Spencer"
+    ? "You"
     : controller.config?.name || "You";
   $("self-avatar").textContent = $("self-name")
     .textContent.slice(0, 2)

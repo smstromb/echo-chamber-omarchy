@@ -23,7 +23,7 @@ test("routine roster and speaker updates retain actionable errors", () => {
   assert.equal(
     status.reconciledActionError(
       lobby,
-      { ...lobby, online: [{ name: "Sam" }] },
+      { ...lobby, online: [{ name: "Orbit" }] },
       "Server unavailable",
     ),
     "Server unavailable",

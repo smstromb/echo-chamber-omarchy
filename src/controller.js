@@ -76,9 +76,9 @@ export class Controller {
     this.state.configured = !!this.config.server || !!initial.demo;
     if (this.demo) {
       this.state.online = [
-        { name: "Sam", room: "main" },
-        { name: "Alex", room: "main" },
-        { name: "Jordan", room: "breakout-1" },
+        { name: "Orbit", room: "main" },
+        { name: "Pixel", room: "main" },
+        { name: "Comet", room: "breakout-1" },
       ];
       this.config.name = "You";
       this.state.signedIn = true;
@@ -319,13 +319,13 @@ export class Controller {
             micMuted: true,
           },
           {
-            identity: "sam",
-            name: "Sam",
+            identity: "orbit",
+            name: "Orbit",
             volume: 100,
             speaking: true,
             sharing: true,
           },
-          { identity: "alex", name: "Alex", volume: 100 },
+          { identity: "pixel", name: "Pixel", volume: 100 },
         ];
         return;
       }

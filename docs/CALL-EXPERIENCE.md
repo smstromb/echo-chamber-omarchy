@@ -16,19 +16,19 @@ Use neutral dark surfaces, restrained green for connected/speaking/selected stat
 
 ## Viewing model
 
-Keep people and media sources distinct. Sam is one person, even if Sam publishes a webcam and a screen. Both tiles identify their owner and source. Audio belongs to the source, not whichever tile happens to be focused.
+Keep participants and media sources distinct. A participant can publish both a webcam and a screen. Both tiles identify their owner and source. Audio belongs to the source, not whichever tile happens to be focused.
 
-| Situation | Default presentation | Available transition |
-|---|---|---|
-| Signed in, outside voice | Main occupancy, names, share/camera indicators where the public protocol exposes them, Join Main; local mic/device preparation | Join with mic muted and camera off. No live media preview implied by the public roster. |
-| Connected, voice only | Compact participant grid with names, mute state and subtle speaking indication | Open Chat, Audio, Jam or Soundboard without navigating away |
-| Cameras active | Camera grid, with voice-only people kept in the roster | Pin a camera, hide local preview, focus/fullscreen |
-| A screen becomes available | Named source with Watch; avoid starting unfamiliar stream audio automatically | Watch that source or add it to the current grid |
-| Watching one screen | Large aspect-correct screen and compact camera/people strip | Grid, switch source, fullscreen, stop watching |
-| Watching several screens | Balanced grid of selected screens with consistent source headers; camera strip separate | Focus any source; return to the same grid selection |
-| Focus | One large source plus a filmstrip of other watched sources | Select another source; hide filmstrip; return to grid |
-| Fullscreen | Current focused source or entire grid, depending on entry point | Escape restores previous layout, panels and focus; controls appear on pointer movement or keyboard focus |
-| Source ends/reconnects | Tile states Source ended / Reconnecting; preserve stable tile identity during recovery | If focused source ends, return to remaining grid; never leave a black fullscreen trap |
+| Situation                  | Default presentation                                                                                                           | Available transition                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Signed in, outside voice   | Main occupancy, names, share/camera indicators where the public protocol exposes them, Join Main; local mic/device preparation | Join with mic muted and camera off. No live media preview implied by the public roster.                  |
+| Connected, voice only      | Compact participant grid with names, mute state and subtle speaking indication                                                 | Open Chat, Audio, Jam or Soundboard without navigating away                                              |
+| Cameras active             | Camera grid, with voice-only people kept in the roster                                                                         | Pin a camera, hide local preview, focus/fullscreen                                                       |
+| A screen becomes available | Named source with Watch; avoid starting unfamiliar stream audio automatically                                                  | Watch that source or add it to the current grid                                                          |
+| Watching one screen        | Large aspect-correct screen and compact camera/people strip                                                                    | Grid, switch source, fullscreen, stop watching                                                           |
+| Watching several screens   | Balanced grid of selected screens with consistent source headers; camera strip separate                                        | Focus any source; return to the same grid selection                                                      |
+| Focus                      | One large source plus a filmstrip of other watched sources                                                                     | Select another source; hide filmstrip; return to grid                                                    |
+| Fullscreen                 | Current focused source or entire grid, depending on entry point                                                                | Escape restores previous layout, panels and focus; controls appear on pointer movement or keyboard focus |
+| Source ends/reconnects     | Tile states Source ended / Reconnecting; preserve stable tile identity during recovery                                         | If focused source ends, return to remaining grid; never leave a black fullscreen trap                    |
 
 Grid, focus and fullscreen are view choices. They do not change volume, mute people, join/leave Jam, or start/stop publishing. A new speaker does not steal a pinned focus. New streams appear as available sources rather than reshuffling watched tiles. Preserve source order, selection, mix and keyboard focus through routine roster/activity updates.
 
@@ -38,16 +38,16 @@ Screens preserve their full aspect ratio with letterboxing; never crop shared te
 
 Quick controls sit where the sound originates; the Audio drawer offers the whole mix. These operate on shared state so the GUI and toolbar never disagree.
 
-| Control | Meaning |
-|---|---|
-| Microphone | Whether others hear my voice; independent of camera and share publishing |
-| Deafen | Mute all received Echo audio: voice, streams, Jam, sounds and chimes. Also mute my microphone while deafened and restore its prior intent on undeafen; make this behavior visible. |
-| Person → Voice | Local mute and 0–300% gain for that person's microphone |
-| Source → Stream audio | Local mute and 0–300% gain for this screen's audio; never mute the owner's voice implicitly |
-| Person → Mute all from Sam | Explicit optional shortcut affecting Sam's voice and streams; clearly separate from moderator actions |
-| Jam volume | My listening gain; does not change the shared playback volume or other listeners |
-| Soundboard / event sounds | Separate local gains; independent from voice and Jam |
-| Output device | Destination for every received audio bus, including future soundboard/Jam integration |
+| Control                   | Meaning                                                                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Microphone                | Whether others hear my voice; independent of camera and share publishing                                                                                                           |
+| Deafen                    | Mute all received Echo audio: voice, streams, Jam, sounds and chimes. Also mute my microphone while deafened and restore its prior intent on undeafen; make this behavior visible. |
+| Person → Voice            | Local mute and 0–300% gain for that person's microphone                                                                                                                            |
+| Source → Stream audio     | Local mute and 0–300% gain for this screen's audio; never mute the owner's voice implicitly                                                                                        |
+| Person → Mute all         | Explicit optional shortcut affecting one participant’s voice and streams; separate from moderator actions                                                                          |
+| Jam volume                | My listening gain; does not change the shared playback volume or other listeners                                                                                                   |
+| Soundboard / event sounds | Separate local gains; independent from voice and Jam                                                                                                                               |
+| Output device             | Destination for every received audio bus, including future soundboard/Jam integration                                                                                              |
 
 Opening a participant's audio control shows two labeled rows when a screen exists: Voice and Screen. Numeric percentages remain visible; a speaker icon indicates local mute. Speaking indicators represent microphone activity, not stream/game audio. Muting retains the gain so unmute restores it. New screen audio starts muted with an explicit Enable audio action; the user's subsequent choice persists for that source during the session. Focusing or hiding a thumbnail does not alter that choice. Stop watching unsubscribes that screen's audio and video, leaving the person's voice unchanged.
 
@@ -65,17 +65,17 @@ Device menus support changing microphone, output and camera during a call. Hot-u
 
 Use one compact now-playing strip when a Jam is active: track/artist, source owner, listener state, local volume and Open Jam. The drawer contains queue and track search/library; it does not take the media stage away. Starting a stream should not discard Jam state. Audio ducking, if added, is an explicit preference, not an unannounced volume change.
 
-| Jam state | User-facing behavior |
-|---|---|
-| No Jam | Start Jam in the Jam drawer; source readiness shown before attempting to start |
-| Available, not listening | Track/source summary and Join Jam; continuing voice does not require listening |
-| Listening | Leave Jam and My volume. Keep the queue readable; expose shared queue actions allowed by the server. |
-| Controlling shared playback | Distinct Skip and Stop music controls with shared-effect labels where needed |
-| Music stopped | Queue and membership remain; Resume music is distinct from starting a new Jam |
-| End Jam | Separate menu action, labeled Ends Jam for everyone; confirm because it clears the shared session/queue |
-| Source offline | Explain the source interruption, preserve queue and provide reconnect/source selection when supported |
+| Jam state                   | User-facing behavior                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| No Jam                      | Start Jam in the Jam drawer; source readiness shown before attempting to start                          |
+| Available, not listening    | Track/source summary and Join Jam; continuing voice does not require listening                          |
+| Listening                   | Leave Jam and My volume. Keep the queue readable; expose shared queue actions allowed by the server.    |
+| Controlling shared playback | Distinct Skip and Stop music controls with shared-effect labels where needed                            |
+| Music stopped               | Queue and membership remain; Resume music is distinct from starting a new Jam                           |
+| End Jam                     | Separate menu action, labeled Ends Jam for everyone; confirm because it clears the shared session/queue |
+| Source offline              | Explain the source interruption, preserve queue and provide reconnect/source selection when supported   |
 
-Distinguish starting/controlling a Jam from supplying its audio. Source selection can use the friend's available Windows PC. Listening and queue participation on Linux do not require a local Spotify audio source. “Use this computer as source” has an explicit readiness state and stays unavailable until Linux capture/routing exists. Do not invent local source support to complete a mockup. Expose takeover and local monitoring controls only to the source computer where meaningful. Leaving Main releases Jam listening/source responsibilities according to the protocol; closing the app window preserves the call.
+Distinguish starting/controlling a Jam from supplying its audio. Source selection can use an available Windows source. Listening and queue participation on Linux do not require a local Spotify audio source. “Use this computer as source” has an explicit readiness state and stays unavailable until Linux capture/routing exists. Do not invent local source support to complete a mockup. Expose takeover and local monitoring controls only to the source computer where meaningful. Leaving Main releases Jam listening/source responsibilities according to the protocol; closing the app window preserves the call.
 
 ## Other functions have intentional homes
 
@@ -85,7 +85,7 @@ Chat uses a drawer with history, unread marker, composer, attachments and clipbo
 
 The bar is a quick-call surface, not a second full media application. Icon state distinguishes offline/unreachable, signed in and alone, people available, joining, joined, and deafened. A separate badge can indicate mic mute without concealing connection state; tooltip text explains the state without relying on color alone.
 
-Before joining: Main occupancy and names, freshness/unreachable feedback, Join Main. After joining: stable participant rows, speaking indicator, camera/share badges, one-click local voice mute and an expansion for Voice/Screen gain. Sharing badge opens that person's source in the GUI. Footer provides microphone, deafen, leave and Open app. A compact Jam row offers join/leave and local volume if active; queue and hosting configuration open the GUI. Right-click keeps its requested behavior: open the GUI. Do not put context actions behind that same gesture.
+Before joining: Main occupancy and names, freshness/unreachable feedback, Join Main. After joining: stable participant rows, speaking indicator, camera/share badges, one-click local voice mute and an expansion for Voice/Screen gain. Sharing badge opens that person's source in the GUI. Footer provides microphone, deafen, leave and Open app. A compact Jam row offers join/leave and local volume if active; queue and hosting configuration open the GUI. Right-click opens the desktop app. Do not put context actions behind that same gesture.
 
 ## Required design/prototype scenarios
 
@@ -108,5 +108,4 @@ Prototype all scenarios with clearly labeled sample data and simulated media bef
 
 - [Discord video calls](https://support.discord.com/hc/en-us/articles/360041721052-Video-Calls): grid/focus, filmstrip, fullscreen/pop-out, simultaneous webcam and screen, in-call device controls. These inform familiar viewing patterns, not a requirement to copy Discord navigation.
 - [Discord multistream](https://support.discord.com/hc/en-us/articles/360045784891-Video-Screenshare-Updates-Multistream-and-More): selecting multiple streams and reducing non-video clutter.
-- Active upstream `core/viewer/index.html`, `jam.js`, `participants.js`, `participants-grid.js`, and the pinned references in the parity audit establish protocol capabilities. Repository screenshots dated February 2026 were inspected as historical visual context only; they are not proof of today's running Windows UI.
-- The current Linux connected-state screenshot shows the existing room sidebar, large participant cards and scattered bottom controls. It has no populated multi-stream/Jam experience to validate. Proposed frames are mockups, not screenshots of implemented features.
+- Active upstream `core/viewer/index.html`, `jam.js`, `participants.js`, `participants-grid.js`, and the pinned references in the parity audit establish protocol capabilities. Upstream screenshots provide historical visual context, not verification of current behavior.

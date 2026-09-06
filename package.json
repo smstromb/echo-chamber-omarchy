@@ -1,6 +1,6 @@
 {
   "name": "echo-chamber-omarchy",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "main": "app/main.cjs",
@@ -15,7 +15,8 @@
     "test:media": "node test/media.mjs",
     "preview": "python3 -m http.server 4173 --bind 127.0.0.1 --directory dist",
     "test:install": "python3 -m unittest discover -s test -p \"*_test.py\"",
-    "package:linux": "npm run build && python3 scripts/package.py"
+    "package:linux": "npm run build && python3 scripts/package.py",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "@tabler/icons": "^3.46.0",

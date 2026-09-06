@@ -202,7 +202,7 @@ const server = createServer(async (req, res) => {
     iceCount++;
     res.end('{"iceServers":[]}');
   } else if (req.url === "/api/online")
-    res.end(JSON.stringify([{ name: "Sam", room: "main" }]));
+    res.end(JSON.stringify([{ name: "Orbit", room: "main" }]));
   else if (req.url === "/v1/auth/login")
     res.end(JSON.stringify({ token: "mock-admin", expires_in_seconds: 3600 }));
   else if (req.url === "/v1/auth/token") {
@@ -329,20 +329,22 @@ try {
       window.connectPeer(url, token, screenToken),
     {
       url: origin.replace("http", "ws"),
-      token: token("sam", "Sam"),
-      screenToken: token("sam$screen", "Sam screen"),
+      token: token("orbit", "Orbit"),
+      screenToken: token("orbit$screen", "Orbit screen"),
     },
   );
   await page.getByRole("button", { name: "Join Main" }).click();
   await page.getByText("● Connected", { exact: true }).waitFor();
-  const sam = page.locator('article[data-identity="sam"]');
-  await sam.getByLabel("Speaking", { exact: true }).waitFor({ timeout: 20000 });
-  await sam.getByLabel("Sharing screen", { exact: true }).waitFor();
+  const orbit = page.locator('article[data-identity="orbit"]');
+  await orbit
+    .getByLabel("Speaking", { exact: true })
+    .waitFor({ timeout: 20000 });
+  await orbit.getByLabel("Sharing screen", { exact: true }).waitFor();
   await page.waitForFunction(() =>
     [...document.querySelectorAll("video")].some((v) => v.videoWidth >= 320),
   );
   await page
-    .getByRole("button", { name: "Hide Sam screen screen", exact: true })
+    .getByRole("button", { name: "Hide Orbit screen screen", exact: true })
     .click();
   await page.getByRole("button", { name: "Show", exact: true }).waitFor();
   await page.getByRole("button", { name: "Show", exact: true }).click();
@@ -351,19 +353,23 @@ try {
       (v) => !v.hidden && v.videoWidth >= 320,
     ),
   );
-  await sam.getByRole("button", { name: "Mute Sam", exact: true }).click();
-  await sam.getByRole("button", { name: "Unmute Sam", exact: true }).waitFor();
-  await sam.getByRole("button", { name: "Sam audio controls" }).click();
+  await orbit.getByRole("button", { name: "Mute Orbit", exact: true }).click();
+  await orbit
+    .getByRole("button", { name: "Unmute Orbit", exact: true })
+    .waitFor();
+  await orbit.getByRole("button", { name: "Orbit audio controls" }).click();
   await page.waitForFunction(() =>
     window.testGains.some((a) => a.gain.value < 0.001),
   );
-  const slider = sam.getByRole("slider", {
-    name: "Sam voice volume",
+  const slider = orbit.getByRole("slider", {
+    name: "Orbit voice volume",
     exact: true,
   });
   await slider.fill("31");
   await slider.dispatchEvent("change");
-  await sam.getByRole("button", { name: "Unmute Sam", exact: true }).click();
+  await orbit
+    .getByRole("button", { name: "Unmute Orbit", exact: true })
+    .click();
   await page.waitForFunction(() =>
     window.testGains.some((a) => Math.abs(a.gain.value - 0.31) < 0.01),
   );
@@ -417,9 +423,9 @@ try {
       new TextEncoder().encode(
         JSON.stringify({
           type: "chat-message",
-          id: "sam-123",
-          identity: "sam",
-          name: "Sam",
+          id: "orbit-123",
+          identity: "orbit",
+          name: "Orbit",
           text: "Hello from Windows protocol",
           timestamp: Date.now(),
           room: "main",

@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { mkdir, copyFile, cp } from "node:fs/promises";
+import { mkdir, copyFile, cp, rm } from "node:fs/promises";
 await mkdir("dist/icons", { recursive: true });
 await build({
   entryPoints: ["src/ui.js"],
@@ -9,6 +9,7 @@ await build({
 });
 for (const file of ["index.html", "style.css"])
   await copyFile(`src/${file}`, `dist/${file}`);
+await rm("dist/assets", { recursive: true, force: true });
 await cp("src/assets", "dist/assets", { recursive: true });
 const icons = [
   "wave-sine",

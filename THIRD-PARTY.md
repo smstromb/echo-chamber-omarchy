@@ -1,6 +1,6 @@
 # Third-party software and media
 
-This is an independent client for [SamWatson86/echo-chamber](https://github.com/SamWatson86/echo-chamber). The upstream repository is the protocol/functionality reference; its server and Windows client are not bundled here.
+This is an independent client for [Echo Chamber](https://github.com/SamWatson86/echo-chamber). The upstream repository is the protocol/functionality reference; its server and Windows client are not bundled here.
 
 Runtime and build dependencies retain their own licenses, supplied in their npm packages:
 
@@ -12,4 +12,4 @@ Runtime and build dependencies retain their own licenses, supplied in their npm 
 - Prettier (formatting): MIT.
 - ws (testing): MIT.
 
-The four images in `src/assets/` are generated sample media, used only in explicit preview/demo mode; see [their provenance](src/assets/README.md). Concept images in `docs/design/` are design references, not screenshots of the running app. No live call captures or participant photos are included.
+The four images in `src/assets/` are generated sample media, used only in explicit preview/demo mode; see [their provenance](src/assets/README.md). README artwork and product-image provenance are documented in [docs/images/README.md](docs/images/README.md). No live call captures or participant photos are included.

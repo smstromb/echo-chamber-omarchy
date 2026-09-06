@@ -5,20 +5,20 @@ test("native screen companions map to their owner without duplicate people", () 
   const rows = people(
     [
       {
-        identity: "sam",
-        name: "Sam",
+        identity: "orbit",
+        name: "Orbit",
         isSpeaking: true,
         isMicrophoneEnabled: true,
       },
-      { identity: "sam$screen", isScreenShareEnabled: true },
+      { identity: "orbit$screen", isScreenShareEnabled: true },
       {
-        identity: "sam$native-presenter",
+        identity: "orbit$native-presenter",
         videoTrackPublications: new Map([
           ["v", { source: "camera", isMuted: false }],
         ]),
       },
     ],
-    { sam: { volume: 34, muted: true } },
+    { orbit: { volume: 34, muted: true } },
   );
   assert.equal(rows.length, 1);
   assert.equal(rows[0].sharing, true);
@@ -26,9 +26,9 @@ test("native screen companions map to their owner without duplicate people", () 
   assert.equal(rows[0].volume, 34);
   assert.equal(rows[0].muted, true);
 });
-test("icon distinguishes available friends, joined, empty and unreachable", () => {
+test("icon distinguishes online participants, joined, empty and unreachable", () => {
   assert.equal(
-    iconState({ status: "idle", online: [{ name: "Sam" }] }),
+    iconState({ status: "idle", online: [{ name: "Orbit" }] }),
     "people-online",
   );
   assert.equal(iconState({ status: "joined", online: [] }), "joined");

@@ -26,20 +26,24 @@ try {
   assert.equal(await otherRooms.evaluate((el) => el.open), false);
   await page.getByRole("button", { name: "Join Main" }).click();
   await page.getByText("● Connected", { exact: true }).waitFor();
-  const sam = page.locator('article[data-identity="sam"]');
-  await sam.getByRole("button", { name: "Mute Sam", exact: true }).click();
-  await sam.getByRole("button", { name: "Unmute Sam", exact: true }).waitFor();
-  await sam.getByRole("button", { name: "Sam audio controls" }).click();
-  const slider = sam.getByRole("slider");
+  const orbit = page.locator('article[data-identity="orbit"]');
+  await orbit.getByRole("button", { name: "Mute Orbit", exact: true }).click();
+  await orbit
+    .getByRole("button", { name: "Unmute Orbit", exact: true })
+    .waitFor();
+  await orbit.getByRole("button", { name: "Orbit audio controls" }).click();
+  const slider = orbit.getByRole("slider");
   await slider.fill("38");
   await slider.dispatchEvent("change");
   await page.waitForFunction(
     () =>
-      document.querySelector('[data-identity="sam"] output').textContent ===
+      document.querySelector('[data-identity="orbit"] output').textContent ===
       "38%",
   );
-  await sam.getByRole("button", { name: "Unmute Sam", exact: true }).click();
-  await sam.getByLabel("Speaking", { exact: true }).waitFor();
+  await orbit
+    .getByRole("button", { name: "Unmute Orbit", exact: true })
+    .click();
+  await orbit.getByLabel("Speaking", { exact: true }).waitFor();
   await page.screenshot({ path: "artifacts/connected.png" });
   const state = JSON.parse(
     execFileSync("python3", ["bin/echo-chamber-ctl", "--demo", "status"], {
@@ -48,10 +52,13 @@ try {
     }),
   ).result;
   assert.equal(state.status, "joined");
-  assert.equal(state.participants.find((p) => p.identity === "sam").volume, 38);
+  assert.equal(
+    state.participants.find((p) => p.identity === "orbit").volume,
+    38,
+  );
   assert.equal(await page.locator("#view-controls").isVisible(), false);
   await page.getByRole("button", { name: "Screens", exact: true }).click();
-  await page.getByRole("button", { name: "Focus Sam screen" }).click();
+  await page.getByRole("button", { name: "Focus Orbit screen" }).click();
   assert.equal(
     await page
       .locator("#screens")
@@ -68,15 +75,15 @@ try {
     .click();
   await page.waitForFunction(() => !document.fullscreenElement);
   await page.getByRole("button", { name: "Grid", exact: true }).click();
-  await sam
-    .getByRole("slider", { name: "Sam screen volume", exact: true })
+  await orbit
+    .getByRole("slider", { name: "Orbit screen volume", exact: true })
     .fill("35");
-  await sam
-    .getByRole("slider", { name: "Sam screen volume", exact: true })
+  await orbit
+    .getByRole("slider", { name: "Orbit screen volume", exact: true })
     .dispatchEvent("change");
   assert.equal(
-    await sam
-      .getByRole("slider", { name: "Sam voice volume", exact: true })
+    await orbit
+      .getByRole("slider", { name: "Orbit voice volume", exact: true })
       .inputValue(),
     "38",
   );

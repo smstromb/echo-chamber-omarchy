@@ -6,13 +6,13 @@ function harness({ failConnect = false, gate = null } = {}) {
   const calls = [],
     gains = [];
   const remote = {
-    identity: "sam",
-    name: "Sam",
+    identity: "orbit",
+    name: "Orbit",
     isMicrophoneEnabled: true,
     setVolume: (...args) => gains.push(args),
   };
   const companion = {
-    identity: "sam$screen",
+    identity: "orbit$screen",
     isScreenShareEnabled: true,
     setVolume: (...args) => gains.push(args),
   };
@@ -27,7 +27,7 @@ function harness({ failConnect = false, gate = null } = {}) {
       },
     },
     remoteParticipants: new Map([
-      ["sam", remote],
+      ["orbit", remote],
       ["screen", companion],
     ]),
     connect: async () => {
@@ -54,13 +54,13 @@ test("join starts muted; mute and volume affect voice and screen audio and resto
   const { c, gains } = harness();
   await c.command({ action: "join", room: "main" });
   assert.equal(c.state.micMuted, true);
-  await c.command({ action: "volume", identity: "sam", value: 37 });
+  await c.command({ action: "volume", identity: "orbit", value: 37 });
   assert.ok(gains.every((g) => g[0] === 0.37));
   gains.length = 0;
-  await c.command({ action: "mute", identity: "sam" });
+  await c.command({ action: "mute", identity: "orbit" });
   assert.ok(gains.every((g) => g[0] === 0));
   gains.length = 0;
-  await c.command({ action: "mute", identity: "sam" });
+  await c.command({ action: "mute", identity: "orbit" });
   assert.ok(gains.every((g) => g[0] === 0.37));
   await c.command({ action: "leave" });
   assert.equal(c.state.status, "idle");
@@ -87,7 +87,7 @@ test("failed media connection removes server presence and returns to lobby", asy
 });
 test("roster failures clear stale people and expose unavailable status", async () => {
   const { c } = harness();
-  c.state.online = [{ name: "Sam" }];
+  c.state.online = [{ name: "Orbit" }];
   c.api = async () => {
     throw Error("offline");
   };
@@ -105,36 +105,36 @@ test("voice and screen mix remain independent, including native screen companion
   await c.command({ action: "join" });
   await c.command({
     action: "volume",
-    identity: "sam",
+    identity: "orbit",
     bus: "screen",
     value: 35,
   });
-  await c.command({ action: "mute", identity: "sam", bus: "voice" });
-  assert.equal(gains["sam:microphone"], 0);
-  assert.equal(gains["sam:screen_share_audio"], 0.35);
-  assert.equal(gains["sam$screen:microphone"], 0.35);
+  await c.command({ action: "mute", identity: "orbit", bus: "voice" });
+  assert.equal(gains["orbit:microphone"], 0);
+  assert.equal(gains["orbit:screen_share_audio"], 0.35);
+  assert.equal(gains["orbit$screen:microphone"], 0.35);
   await c.command({ action: "deafen" });
   assert.ok(Object.values(gains).every((x) => x === 0));
   await c.command({ action: "deafen" });
-  assert.equal(gains["sam:microphone"], 0);
-  assert.equal(gains["sam$screen:microphone"], 0.35);
-  await c.command({ action: "mute", identity: "sam", bus: "voice" });
-  assert.equal(gains["sam:microphone"], 1);
-  assert.equal(gains["sam:screen_share_audio"], 0.35);
+  assert.equal(gains["orbit:microphone"], 0);
+  assert.equal(gains["orbit$screen:microphone"], 0.35);
+  await c.command({ action: "mute", identity: "orbit", bus: "voice" });
+  assert.equal(gains["orbit:microphone"], 1);
+  assert.equal(gains["orbit:screen_share_audio"], 0.35);
 });
 test("changing voice on a legacy mix preserves its previous screen gain", async () => {
   const { c } = harness();
-  c.mix.sam = { volume: 62, muted: false };
+  c.mix.orbit = { volume: 62, muted: false };
   await c.command({ action: "join" });
   await c.command({
     action: "volume",
-    identity: "sam",
+    identity: "orbit",
     bus: "voice",
     value: 20,
   });
-  assert.equal(c.mix.sam.screenVolume, 62);
-  await c.command({ action: "mute", identity: "sam", bus: "voice" });
-  assert.equal(c.mix.sam.screenMuted, false);
+  assert.equal(c.mix.orbit.screenVolume, 62);
+  await c.command({ action: "mute", identity: "orbit", bus: "voice" });
+  assert.equal(c.mix.orbit.screenMuted, false);
 });
 
 test("cancel interrupts a stalled connect without waiting for the media timeout", async () => {

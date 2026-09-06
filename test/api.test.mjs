@@ -16,10 +16,10 @@ test("online preview is public and never requests a participant token", async ()
     { ...defaults(), server: "https://example.com" },
     async (...args) => {
       calls.push(args);
-      return response([{ name: "Sam", room: "main" }]);
+      return response([{ name: "Orbit", room: "main" }]);
     },
   );
-  assert.equal((await api.online())[0].name, "Sam");
+  assert.equal((await api.online())[0].name, "Orbit");
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], "https://example.com/api/online");
   assert.equal(calls[0][1].headers.Authorization, undefined);
